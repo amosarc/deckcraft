@@ -1537,3 +1537,28 @@ fn glyph_advances_are_quantized_to_hundredths_of_a_point() {
     assert_eq!(glyph_advance(32.0), 32.0);
     assert_eq!(glyph_advance(8.0), 8.0);
 }
+
+#[test]
+fn single_line_autofit_labels_never_wrap() {
+    // spAutoFit 单行标签框（保存高度=一行文字+内边距）：度量略有差异时不按框宽
+    // 换行——WPS 课件“变式3：”标签被折成两行叠到习题上的实测驱动。
+    let (p, mut sh) = setup("变式3：", 95.0, 41.0);
+    sh.text_box = true;
+    let body = sh.text.as_mut().unwrap();
+    body.body.autofit = Some(AutoFit::Shape);
+    for para in &mut body.paragraphs {
+        for run in &mut para.runs {
+            run.props.size = Some(28.0);
+        }
+    }
+    let l = lay(&p, &sh, 95.0, 41.0);
+    assert_eq!(l.lines.len(), 1, "单行标签不换行");
+
+    // 两行高的同款框（作者排的就是多行）：换行语义不变。
+    let (p, mut sh) = setup("变式3：变式3：变式3：", 95.0, 74.0);
+    sh.text_box = true;
+    let body = sh.text.as_mut().unwrap();
+    body.body.autofit = Some(AutoFit::Shape);
+    let l = lay(&p, &sh, 95.0, 74.0);
+    assert!(l.lines.len() >= 2, "装不下的文字仍换行");
+}
